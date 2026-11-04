@@ -14,17 +14,30 @@ as matrículas vêm do Censo Escolar 2025, e os indicadores de qualidade vêm do
 IDEB 2025 (que incorpora as notas do Saeb 2025). O projeto não faz
 comparações com outros anos.
 
+### Perguntas de pesquisa
+
+- **P1** — Como se distribuem as matrículas das escolas públicas de São Paulo
+  em 2025?
+- **P2** — Como o IDEB 2025 varia entre as redes administrativas e as etapas
+  de ensino das escolas públicas de São Paulo?
+- **P3** — Como os resultados das escolas identificadas no Jardim Macedônia se
+  comparam com as médias das escolas da mesma rede e etapa no município de São
+  Paulo?
+
+As respostas estão na seção [Análise exploratória (EDA)](#análise-exploratória-eda).
+
 ## Tecnologias utilizadas
 
 - **Python** (testado com a versão 3.14)
-- **pandas** — leitura, tratamento, filtros e `merge` dos dados
+- **pandas** — leitura, tratamento, filtros, agregações e `merge` dos dados
+- **NumPy** — estatísticas da EDA: quartis (`np.percentile`), desvio-padrão,
+  assimetria, limites de Tukey para outliers e posição percentil das escolas
 - **Matplotlib** — geração dos gráficos
 - **requests** — download dos arquivos oficiais, com timeout e tratamento de
   erros
 - **openpyxl** — leitura das planilhas XLSX do IDEB pelo pandas
-
-O NumPy não é importado diretamente pelos scripts; ele é instalado
-automaticamente como dependência do pandas.
+- **PostgreSQL 17** e **psycopg 3** — banco relacional (schema `educacao`),
+  carga transacional e views analíticas
 
 ## Fontes de dados
 
@@ -109,7 +122,14 @@ e registra URL, data de execução e SHA-256 em
 │   └── processed/
 │       ├── escolas_macedonia_2025.csv                  # gerado por main.py
 │       └── escolas_publicas_sp_censo_2025_ideb_2025.csv  # integrar_ideb.py
-├── graficos/                     # gráficos gerados por main.py
+├── graficos/                     # gráficos de main.py e os 3 gráficos finais (eda_*.png)
+├── resultados/                   # tabelas analíticas da EDA (geradas por eda.py)
+├── modelagem/                    # modelos conceitual, lógico e físico (DDL)
+├── sql/
+│   ├── views/                    # 4 views analíticas do schema educacao
+│   └── validacoes/               # consultas de validação (somente leitura)
+├── docs/                         # documentação da carga e das views
+├── tests/                        # testes automatizados (unittest)
 ├── preparar_censo_2025.py        # download, validação e recorte do Censo 2025
 ├── main.py                       # pipeline principal do Censo Escolar 2025
 ├── ingestao.py                   # download e leitura das fontes oficiais
@@ -117,6 +137,11 @@ e registra URL, data de execução e SHA-256 em
 ├── analise.py                    # estatísticas, validações e gráficos
 ├── integrar_ideb.py              # integração Censo 2025 × IDEB 2025
 ├── explorar_ideb.py              # exploração da base integrada
+├── carga_postgres.py             # carga transacional no PostgreSQL
+├── fonte_dados_eda.py            # EDA: dados do CSV ou das views (mesmo formato)
+├── estatisticas_eda.py           # EDA: todas as estatísticas (pandas + NumPy)
+├── graficos_eda.py               # EDA: os 3 gráficos finais (Matplotlib)
+├── eda.py                        # EDA: ponto de entrada (--fonte csv | postgres)
 ├── requirements.txt
 └── README.md
 ```
@@ -211,10 +236,39 @@ e `explorar_ideb.py` sem baixar os microdados do Censo.
 `main.py` abre as janelas dos gráficos (`plt.show()`); feche cada janela para
 a execução continuar.
 
-### 3. Gráficos gerados
+### 3. Análise exploratória e gráficos finais
+
+```bash
+python eda.py --fonte csv                        # reprodutível, sem banco de dados
+python eda.py --fonte postgres --pedir-senha     # lê as views do PostgreSQL
+python -m unittest discover -s tests -v          # testes automatizados
+```
+
+As duas fontes entregam a mesma base (uma linha por escola, etapa e ano) e
+usam as mesmas funções de `estatisticas_eda.py`.
+
+- **Modo CSV:** usa só a base integrada versionada.
+- **Modo PostgreSQL:**
+  - lê as views 01 a 04 em uma sessão somente leitura;
+  - confere os resultados com as views 02 e 03 e com o modo CSV;
+  - a senha é digitada de forma oculta; o servidor e o usuário vêm de
+    `PGHOST`, `PGPORT` e `PGUSER`, e nenhuma credencial fica no código.
+
+Saídas: três PNGs em `graficos/` e as tabelas em `resultados/` (CSV com `;` e
+vírgula decimal).
+
+### 4. Gráficos gerados
+
+Gráficos finais da EDA (`eda.py`):
+
+- [P1 — Matrículas nas escolas públicas de São Paulo — 2025](graficos/eda_p1_matriculas_rede_2025.png)
+- [P2 — Média do IDEB 2025 por rede e etapa de ensino — São Paulo](graficos/eda_p2_ideb_rede_etapa_2025.png)
+- [P3 — IDEB 2025: escolas do Jardim Macedônia × média da rede em São Paulo](graficos/eda_p3_jardim_macedonia_2025.png)
+
+Gráficos auxiliares do pipeline (`main.py`):
 
 - [Média de matrículas no Fundamental e Médio por rede — São Paulo, Censo 2025](graficos/media_matriculas_por_rede_2025.png)
-- [Matrículas no Jardim Macedônia — Censo 2025](graficos/matriculas_macedonia_2025.png)
+- [Matrículas das escolas selecionadas no Jardim Macedônia — Censo 2025](graficos/matriculas_macedonia_2025.png)
 
 ## Resultados (Censo Escolar 2025 e IDEB 2025)
 
@@ -297,6 +351,91 @@ valor permanece ausente.
 - `SITUACAO_IDEB_2025`: "Divulgado", "Não divulgado pelo Inep" ou
   "Escola/etapa não localizada no arquivo do Inep".
 
+## Análise exploratória (EDA)
+
+Executada com `python eda.py --fonte csv` (04/11/2026). Escolas públicas em
+atividade de São Paulo com Ensino Fundamental ou Médio, ano 2025.
+
+**Validação no PostgreSQL (04/11/2026):** `python eda.py --fonte postgres`
+gerou os mesmos resultados do modo CSV.
+
+- As 9 combinações de rede e etapa conferem com a view 02.
+- As 4 linhas do Jardim Macedônia conferem com a view 03.
+- A view 04 passou em 16 de 16 verificações.
+- Evidências: `resultados/conferencia_view_*.csv`.
+
+O modo CSV continua sendo suficiente para reproduzir toda a análise sem banco
+de dados.
+
+### Diagnóstico de qualidade
+
+A base tem 2.973 registros escola/etapa de 1.709 escolas:
+
+- 0 chaves duplicadas e somente o ano 2025;
+- 0 matrículas menores ou iguais a zero;
+- tipos conferidos (códigos INEP como texto; matrículas e anos inteiros; IDEB
+  decimal);
+- 2.596 IDEBs divulgados e 377 ausentes, mantidos como `NULL` (nenhum IDEB
+  igual a zero): 311 não divulgados pelo Inep e 66 não localizados no arquivo
+  do Inep.
+
+A tabela completa está em `resultados/diagnostico_qualidade_2025.csv`.
+
+### P1 — Matrículas por escola
+
+A unidade é a **escola**: as matrículas das etapas são somadas antes da média.
+
+| Rede | Escolas | Total de matrículas | Média | Mediana | Q1 | Q3 | Desvio-padrão |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Federal | 5 | 2.506 | 501,2 | 345 | 333 | 556 | 345,5 |
+| Estadual | 1.093 | 829.862 | 759,3 | 695 | 460 | 994 | 398,6 |
+| Municipal | 611 | 451.653 | 739,2 | 745 | 598 | 856,5 | 214,1 |
+| **Total** | **1.709** | **1.284.021** | **751,33** | **723** | **512** | **928** | **344,3** |
+
+A distribuição tem assimetria positiva (0,83), ou seja, uma cauda de escolas
+grandes.
+
+**Outliers (critério de Tukey, 1,5 × IQR):**
+
+- os limites são −112 e 1.552 matrículas;
+- **49 escolas** ficam acima do limite superior (47 estaduais e 2 municipais),
+  e nenhuma abaixo do inferior;
+- todas foram **mantidas**: são registros oficiais do Censo, sem
+  inconsistência, que mostram o porte real das escolas;
+- por isso, a mediana e o IQR são apresentados junto com a média;
+- a lista está em `resultados/p1_outliers_matriculas_2025.csv`.
+
+### P2 — IDEB por rede e etapa
+
+Os valores são médias dos IDEBs **divulgados**: a ausência não é tratada como
+zero. Não são um IDEB oficial agregado do município.
+
+| Rede | Anos iniciais | Anos finais | Ensino Médio |
+|---|---:|---:|---:|
+| Federal | 8,20 (n = 1) | 7,60 (n = 1) | 5,60 (n = 1) |
+| Estadual | 6,53 (n = 514) | 5,11 (n = 574) | 4,44 (n = 532) |
+| Municipal | 5,87 (n = 543) | 4,93 (n = 427) | 4,03 (n = 3) |
+
+- A rede federal tem uma única nota por etapa, e a rede municipal tem 3 no
+  Ensino Médio: esses grupos não são representativos.
+- A falta de IDEB varia entre os grupos. Nos anos finais da rede municipal,
+  22,6% das ofertas não têm nota; nos anos iniciais da estadual, só 4,6%.
+
+### P3 — Jardim Macedônia × média da mesma rede e etapa
+
+| Escola | Etapa | IDEB | Média da rede e etapa | Diferença | Percentil na rede |
+|---|---|---:|---:|---:|---:|
+| EMEF César Yasigi (municipal) | Anos iniciais | 6,4 | 5,87 | +0,53 | 90,6% |
+| EE Jornalista David Nasser (estadual) | Anos iniciais | 5,7 | 6,53 | −0,83 | 9,3% |
+| EE Jornalista David Nasser (estadual) | Anos finais | 3,9 | 5,11 | −1,21 | 0,5% |
+| EE Jornalista David Nasser (estadual) | Ensino Médio | não divulgado | 4,44 | — | — |
+
+- O **percentil** é a porcentagem de escolas da mesma rede e etapa com IDEB
+  menor ou igual ao da escola.
+- As médias da rede incluem a própria escola.
+- As duas escolas foram identificadas por código INEP e **não representam
+  todas as escolas do Jardim Macedônia**.
+
 ## Limitações da pesquisa
 
 - **Bairro indisponível em 2025:** o Jardim Macedônia é identificado por uma
@@ -312,8 +451,10 @@ valor permanece ausente.
 - **Data em `fontes_ideb_2025.csv` e `fonte_censo_2025.csv`:** registra a data
   da última execução, mesmo quando o ZIP é reutilizado. A garantia de que o
   arquivo é o mesmo é dada pelo SHA-256.
-- **Sem testes automatizados:** a verificação é feita pelas validações
-  executadas durante o pipeline.
+- **Análise descritiva:** as comparações não permitem conclusões causais.
+  Matrículas indicam o porte da escola, não a qualidade do ensino.
+- **Comparação do Jardim Macedônia:** há um único valor por escola e etapa, o
+  que não permite teste estatístico.
 
 ## Estado atual do desenvolvimento
 
@@ -322,11 +463,14 @@ Concluído:
 - download, validação e recorte automatizados do Censo Escolar 2025;
 - pipeline de análise do Censo Escolar 2025 (`main.py`) e seus gráficos;
 - integração com o IDEB 2025 e validações do merge (`integrar_ideb.py`);
-- exploração da base integrada (`explorar_ideb.py`).
+- exploração da base integrada (`explorar_ideb.py`);
+- modelagem relacional e carga transacional no PostgreSQL
+  (`carga_postgres.py`, [docs/carga_postgres.md](docs/carga_postgres.md));
+- views analíticas ([docs/views_analiticas.md](docs/views_analiticas.md));
+- análise exploratória com os três gráficos finais (`eda.py`);
+- testes automatizados em `tests/`.
 
 Ainda não implementado:
 
 - identificação do bairro por uma fonte oficial de 2025 (Catálogo de Escolas);
-- testes automatizados.
-
-O projeto não utiliza banco de dados nem dashboard nesta etapa.
+- relatório final em PDF.

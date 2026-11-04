@@ -1,0 +1,32 @@
+﻿verificacao;resultado
+Registros escola x etapa;2973
+Escolas distintas;1709
+Chaves escola x etapa x ano duplicadas;0
+Anos de referência;2025
+Matrículas menores ou iguais a zero;0
+IDEB divulgado;2596
+IDEB ausente (NULL, não convertido em zero);377
+IDEB igual a zero;0
+Situação do IDEB: Divulgado;2596
+Situação do IDEB: Não divulgado pelo Inep;311
+Situação do IDEB: Escola/etapa não localizada no arquivo do Inep;66
+Nulos em co_entidade;0
+Nulos em no_entidade;0
+Nulos em tp_dependencia;0
+Nulos em rede_administrativa;0
+Nulos em co_etapa_ensino;0
+Nulos em no_etapa_ensino;0
+Nulos em qt_matriculas;0
+Nulos em vl_ideb;377
+Nulos em situacao_ideb;0
+Nulos em ano_referencia;0
+Tipo de co_entidade;str
+Tipo de no_entidade;str
+Tipo de tp_dependencia;int64
+Tipo de rede_administrativa;str
+Tipo de co_etapa_ensino;str
+Tipo de no_etapa_ensino;str
+Tipo de qt_matriculas;int64
+Tipo de vl_ideb;float64
+Tipo de situacao_ideb;str
+Tipo de ano_referencia;int64

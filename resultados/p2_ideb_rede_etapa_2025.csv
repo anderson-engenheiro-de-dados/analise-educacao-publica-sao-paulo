@@ -1,0 +1,10 @@
+﻿tp_dependencia;rede_administrativa;co_etapa_ensino;no_etapa_ensino;ofertas;ideb_divulgados;ideb_ausentes;pct_ausente;media_2casas;media;mediana;q1;q3;iqr;desvio_padrao;coef_variacao_pct;assimetria;minimo;maximo;aviso
+1;Federal;AI;Anos iniciais do Ensino Fundamental;1;1;0;0,0000;8,2000;8,2000;8,2000;8,2000;8,2000;0,0000;;;;8,2000;8,2000;amostra pequena: 1 nota(s) divulgada(s)
+1;Federal;AF;Anos finais do Ensino Fundamental;1;1;0;0,0000;7,6000;7,6000;7,6000;7,6000;7,6000;0,0000;;;;7,6000;7,6000;amostra pequena: 1 nota(s) divulgada(s)
+1;Federal;EM;Ensino Médio;4;1;3;75,0000;5,6000;5,6000;5,6000;5,6000;5,6000;0,0000;;;;5,6000;5,6000;amostra pequena: 1 nota(s) divulgada(s)
+2;Estadual;AI;Anos iniciais do Ensino Fundamental;539;514;25;4,6382;6,5300;6,5325;6,5000;6,1000;6,9000;0,8000;0,6336;9,6998;0,4412;4,7000;8,5000;
+2;Estadual;AF;Anos finais do Ensino Fundamental;625;574;51;8,1600;5,1100;5,1101;5,0000;4,7000;5,5000;0,8000;0,5759;11,2704;0,4401;3,7000;6,7000;
+2;Estadual;EM;Ensino Médio;632;532;100;15,8228;4,4400;4,4406;4,3000;4,0000;4,9000;0,9000;0,6703;15,0955;0,7769;2,9000;7,3000;
+3;Municipal;AI;Anos iniciais do Ensino Fundamental;610;543;67;10,9836;5,8700;5,8657;5,9000;5,6000;6,2000;0,6000;0,4640;7,9108;-0,1782;4,5000;7,3000;
+3;Municipal;AF;Anos finais do Ensino Fundamental;552;427;125;22,6449;4,9300;4,9316;4,9000;4,6500;5,2000;0,5500;0,4383;8,8879;0,0845;3,5000;6,3000;
+3;Municipal;EM;Ensino Médio;9;3;6;66,6667;4,0300;4,0333;3,9000;3,7500;4,2500;0,5000;0,5132;12,7230;0,4451;3,6000;4,6000;amostra pequena: 3 nota(s) divulgada(s)

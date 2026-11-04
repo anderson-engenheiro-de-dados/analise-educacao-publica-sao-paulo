@@ -1,0 +1,5 @@
+﻿co_entidade;no_entidade;rede_administrativa;co_etapa_ensino;no_etapa_ensino;qt_matriculas;situacao_ideb;ideb_escola;media_rede_etapa;diferenca;mediana_rede_etapa;q1_rede_etapa;q3_rede_etapa;ideb_divulgados_rede_etapa;percentil_na_rede_etapa
+35010281;EMEF CESAR YASIGI PROF;Municipal;AI;Anos iniciais do Ensino Fundamental;464;Divulgado;6,4000;5,8700;0,5300;5,9000;5,6000;6,2000;543;90,6077
+35044386;DAVID NASSER JORNALISTA;Estadual;AI;Anos iniciais do Ensino Fundamental;233;Divulgado;5,7000;6,5300;-0,8300;6,5000;6,1000;6,9000;514;9,3385
+35044386;DAVID NASSER JORNALISTA;Estadual;AF;Anos finais do Ensino Fundamental;336;Divulgado;3,9000;5,1100;-1,2100;5,0000;4,7000;5,5000;574;0,5226
+35044386;DAVID NASSER JORNALISTA;Estadual;EM;Ensino Médio;393;Não divulgado pelo Inep;;4,4400;;4,3000;4,0000;4,9000;532;
