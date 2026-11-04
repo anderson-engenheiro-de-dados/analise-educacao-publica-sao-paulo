@@ -5,7 +5,14 @@
 -- Schema  : educacao (já existente; nenhum objeto é criado em public)
 -- Script  : 01_criacao_tabelas.sql - modelo físico (DDL)
 --
--- ATENÇÃO: script para REVISÃO. Não executar antes da aprovação do modelo.
+-- SITUAÇÃO: modelo APROVADO e IMPLEMENTADO no banco educacao_jd_macedonia
+-- (PostgreSQL 17.10), com as 4 tabelas e as 30 restrições validadas no
+-- catálogo (4 PK, 3 FK, 2 UNIQUE, 21 CHECK). Versionado no commit 91f52c0.
+--
+-- ATENÇÃO: NÃO execute este script novamente sobre as tabelas existentes.
+-- Ele foi mantido como documentação do modelo físico. Uma nova execução
+-- falharia no CREATE TABLE (as tabelas já existem) e a transação seria
+-- desfeita, mas não há motivo para executá-lo de novo.
 --
 -- Ordem de criação (respeita as chaves estrangeiras):
 --   1. educacao.escola
@@ -18,7 +25,8 @@
 -- A FK oferta_ensino.co_etapa_ensino tem apenas 3 valores distintos: um índice
 -- não traria ganho. A FK de indicador_educacional é igual à sua PK.
 --
--- Execução recomendada (após aprovação), interrompendo no primeiro erro:
+-- Forma de execução recomendada em um banco NOVO e vazio (interrompe no
+-- primeiro erro):
 --   psql -d educacao_jd_macedonia -v ON_ERROR_STOP=1 -f 01_criacao_tabelas.sql
 -- =============================================================================
 

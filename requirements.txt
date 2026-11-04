@@ -2,3 +2,6 @@ pandas>=2.0
 matplotlib>=3.7
 requests>=2.31
 openpyxl>=3.1
+# Driver PostgreSQL usado somente por "carga_postgres.py --load".
+# [binary] já inclui a libpq: não exige compilador nem PostgreSQL no PATH.
+psycopg[binary]>=3.2
