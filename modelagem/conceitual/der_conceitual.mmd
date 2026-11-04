@@ -1,0 +1,52 @@
+%% DER conceitual (notação de Chen adaptada) — Censo Escolar 2025 e IDEB 2025
+%% Retângulo = entidade | losango = relacionamento | elipse = atributo
+%% Rótulo (mín,máx) = quantas vezes UMA ocorrência da entidade participa do relacionamento
+flowchart LR
+    %% Entidades
+    ESC["ESCOLA"]
+    ETA["ETAPA DE ENSINO"]
+    OFE[["OFERTA DE ENSINO<br/>(entidade associativa)"]]
+    IND["INDICADOR EDUCACIONAL"]
+
+    %% Relacionamentos
+    R1{"realiza"}
+    R2{"corresponde a"}
+    R3{"é avaliada por"}
+
+    ESC ---|"(0,3)"| R1
+    R1 ---|"(1,1)"| OFE
+    ETA ---|"(0,N)"| R2
+    R2 ---|"(1,1)"| OFE
+    OFE ---|"(0,1)"| R3
+    R3 ---|"(1,1)"| IND
+
+    %% Atributos de ESCOLA
+    A1(["código INEP (identificador)"]) --- ESC
+    A2(["nome"]) --- ESC
+    A3(["dependência administrativa"]) --- ESC
+    A4(["situação de funcionamento"]) --- ESC
+    A5(["distrito"]) --- ESC
+    A6(["possui registro de matrícula"]) --- ESC
+
+    %% Atributos de ETAPA DE ENSINO
+    B1(["código da etapa (identificador)"]) --- ETA
+    B2(["descrição"]) --- ETA
+
+    %% Atributos de OFERTA DE ENSINO
+    OFE --- C1(["ano de referência (identificador parcial)"])
+    OFE --- C2(["quantidade de matrículas"])
+
+    %% Atributos de INDICADOR EDUCACIONAL
+    IND --- D1(["situação de divulgação"])
+    IND --- D2(["IDEB"])
+    IND --- D3(["nota de Matemática (Saeb)"])
+    IND --- D4(["nota de Língua Portuguesa (Saeb)"])
+    IND --- D5(["nota média padronizada"])
+    IND --- D6(["indicador de rendimento"])
+
+    classDef entidade fill:#e8f0fe,stroke:#1a4fa0,stroke-width:2px,color:#0b2350
+    classDef relacao fill:#fff4e0,stroke:#b36b00,color:#4a2c00
+    classDef atributo fill:#ffffff,stroke:#777777,color:#222222
+    class ESC,ETA,OFE,IND entidade
+    class R1,R2,R3 relacao
+    class A1,A2,A3,A4,A5,A6,B1,B2,C1,C2,D1,D2,D3,D4,D5,D6 atributo

@@ -1,0 +1,42 @@
+%% DER lógico — schema educacao (Censo Escolar 2025 e IDEB 2025)
+%% ||--o{ : um para zero ou muitos | ||--o| : um para zero ou um
+erDiagram
+    ESCOLA ||--o{ OFERTA_ENSINO : "realiza (0 a 3 por ano)"
+    ETAPA_ENSINO ||--o{ OFERTA_ENSINO : "corresponde a"
+    OFERTA_ENSINO ||--o| INDICADOR_EDUCACIONAL : "é avaliada por (0 ou 1)"
+
+    ESCOLA {
+        varchar8 co_entidade PK "código INEP"
+        varchar100 no_entidade "NOT NULL"
+        varchar7 co_municipio "NOT NULL, = 3550308"
+        varchar100 no_distrito "NOT NULL"
+        smallint tp_dependencia "NOT NULL, 1 a 4"
+        smallint tp_situacao_funcionamento "NOT NULL, 1 a 4"
+        smallint ano_censo "NOT NULL, = 2025"
+        boolean possui_registro_matricula "NOT NULL"
+    }
+
+    ETAPA_ENSINO {
+        varchar2 co_etapa_ensino PK "AI, AF ou EM"
+        varchar60 no_etapa_ensino UK "NOT NULL"
+        varchar30 coluna_matricula_censo UK "NOT NULL"
+    }
+
+    OFERTA_ENSINO {
+        varchar8 co_entidade PK, FK "escola"
+        varchar2 co_etapa_ensino PK, FK "etapa_ensino"
+        smallint ano_referencia PK "= 2025"
+        integer qt_matriculas "NOT NULL, maior que 0"
+    }
+
+    INDICADOR_EDUCACIONAL {
+        varchar8 co_entidade PK, FK "oferta_ensino"
+        varchar2 co_etapa_ensino PK, FK "oferta_ensino"
+        smallint ano_referencia PK, FK "oferta_ensino"
+        varchar60 situacao_ideb "NOT NULL, 3 valores"
+        numeric_7_6 vl_indicador_rendimento "NULL, 0 a 1"
+        numeric_5_2 vl_nota_matematica "NULL, 0 a 500"
+        numeric_5_2 vl_nota_portugues "NULL, 0 a 500"
+        numeric_8_6 vl_nota_media_padronizada "NULL, 0 a 10"
+        numeric_3_1 vl_ideb "NULL, 0 a 10"
+    }
