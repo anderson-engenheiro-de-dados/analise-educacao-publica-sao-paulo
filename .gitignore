@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Variáveis de ambiente e credenciais
+.env
+.env.*
+*.pem
+*.key
+
+# Configurações locais de editor/sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs e arquivos temporários
+*.log
+*.tmp
+*.bak
+*.part
+~$*
+
+# Cópias de segurança locais
+backup/
+
+# Arquivos oficiais grandes do IDEB 2025 (~200 MB).
+# São baixados novamente por integrar_ideb.py a partir do site do Inep.
+data/raw/ideb/*.zip
