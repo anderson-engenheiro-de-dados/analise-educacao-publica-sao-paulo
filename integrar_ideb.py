@@ -1,7 +1,7 @@
 """
-Integração do Censo Escolar 2024 com os resultados oficiais do IDEB 2025.
+Integração do Censo Escolar 2025 com os resultados oficiais do IDEB 2025.
 
-Execute a partir da pasta Entrega_final:
+Execute a partir da pasta Entrega_final (depois de preparar_censo_2025.py):
     python integrar_ideb.py
 """
 
@@ -18,6 +18,11 @@ CODIGOS_ESCOLAS_INTERESSE = ["35010281", "35044386"]
 def preparar_base_censo_por_etapa():
     """Lê o Censo e mantém escolas públicas ativas com matrícula por etapa."""
     dados = ingestao.carregar_dados_brutos(ingestao.CAMINHO_DADOS_BRUTOS)
+    tratamento.validar_ano_censo(dados)
+    matriculas = ingestao.carregar_dados_brutos(
+        ingestao.CAMINHO_MATRICULAS_BRUTAS
+    )
+    dados = tratamento.juntar_escolas_e_matriculas(dados, matriculas)
     escolas = tratamento.selecionar_colunas_integracao_ideb(dados)
     escolas = tratamento.filtrar_escolas_publicas_sp(escolas)
     escolas = tratamento.filtrar_escolas_ativas(escolas)
@@ -49,7 +54,7 @@ def executar_integracao():
             "CO_ENTIDADE": str,
             "ANO_CENSO": str,
             "ANO_IDEB": str,
-            "MATRICULAS_ETAPA_2024": "Int64",
+            "MATRICULAS_ETAPA_2025": "Int64",
         },
     )
 

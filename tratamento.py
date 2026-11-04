@@ -9,17 +9,21 @@ Cada função recebe um DataFrame, faz UMA tarefa e retorna o resultado.
 
 import pandas as pd
 
-# Caminho onde o resultado tratado será salvo
-CAMINHO_DADOS_PROCESSADOS = "data/processed/escolas_macedonia.csv"
+# Ano de referência do Censo Escolar usado em todo o processamento
+ANO_CENSO = "2025"
+
+# Caminhos onde os resultados tratados serão salvos (o ano fica no nome)
+CAMINHO_DADOS_PROCESSADOS = "data/processed/escolas_macedonia_2025.csv"
 CAMINHO_DADOS_IDEB_PROCESSADOS = (
-    "data/processed/escolas_publicas_sp_ideb_2025.csv"
+    "data/processed/escolas_publicas_sp_censo_2025_ideb_2025.csv"
 )
 
 # Colunas que usamos na análise
 COLUNAS_NECESSARIAS = [
+    "NU_ANO_CENSO",
     "CO_ENTIDADE",
     "NO_ENTIDADE",
-    "NO_BAIRRO",
+    "NO_DISTRITO",
     "TP_DEPENDENCIA",
     "QT_MAT_FUND",
     "QT_MAT_MED",
@@ -30,7 +34,7 @@ COLUNAS_CENSO_IDEB = [
     "NU_ANO_CENSO",
     "CO_ENTIDADE",
     "NO_ENTIDADE",
-    "NO_BAIRRO",
+    "NO_DISTRITO",
     "TP_DEPENDENCIA",
     "QT_MAT_FUND",
     "QT_MAT_FUND_AI",
@@ -44,6 +48,62 @@ ETAPAS_E_MATRICULAS = {
     "Anos finais do Ensino Fundamental": "QT_MAT_FUND_AF",
     "Ensino Médio": "QT_MAT_MED",
 }
+
+# Colunas trazidas da Tabela de Matrícula (em 2025 elas não estão mais
+# na Tabela de Escola)
+COLUNAS_MATRICULAS = [
+    "QT_MAT_FUND",
+    "QT_MAT_FUND_AI",
+    "QT_MAT_FUND_AF",
+    "QT_MAT_MED",
+]
+
+# O Censo 2025 não publica o bairro (NO_BAIRRO) nos microdados.
+# Por isso, as escolas do Jardim Macedônia são localizadas por uma lista
+# fixa de códigos INEP, usada apenas como referência cadastral (a lista
+# veio do cadastro do Censo anterior, que ainda trazia o bairro).
+# Limitação: escolas novas no bairro não entram automaticamente.
+CODIGOS_JARDIM_MACEDONIA = [
+    "35010281",  # EMEF CESAR YASIGI PROF
+    "35044386",  # DAVID NASSER JORNALISTA
+    "35238946",  # CEI DIRET JARDIM MACEDONIA
+    "35578502",  # CR P CONV PENTAGRAMA II
+    "35582633",  # CR P CONV VO CHICA
+    "35902524",  # CESAR YASIGI PROFESSOR
+]
+
+
+def validar_ano_censo(dados, ano=ANO_CENSO):
+    """Interrompe o processamento se a base não for do ano esperado."""
+    anos_encontrados = sorted(dados["NU_ANO_CENSO"].dropna().unique())
+    if anos_encontrados != [ano]:
+        raise ValueError(
+            f"Esperado somente o Censo {ano}, encontrado: {anos_encontrados}"
+        )
+    return dados
+
+
+def juntar_escolas_e_matriculas(escolas, matriculas):
+    """Acrescenta ao cadastro das escolas as matrículas de cada uma."""
+    validar_ano_censo(matriculas)
+
+    if matriculas["CO_ENTIDADE"].duplicated().any():
+        raise ValueError("A Tabela de Matrícula possui código INEP duplicado")
+
+    # how="left" -> mantém todas as escolas do cadastro, mesmo sem matrícula
+    # validate="one_to_one" -> garante que o merge não multiplica registros
+    dados = pd.merge(
+        escolas,
+        matriculas[["CO_ENTIDADE"] + COLUNAS_MATRICULAS],
+        how="left",
+        on="CO_ENTIDADE",
+        validate="one_to_one",
+    )
+
+    if dados.shape[0] != escolas.shape[0]:
+        raise ValueError("A junção escola x matrícula alterou a quantidade")
+
+    return dados
 
 
 def selecionar_colunas(dados):
@@ -59,13 +119,11 @@ def selecionar_colunas_integracao_ideb(dados):
 
 
 def filtrar_jardim_macedonia(escolas):
-    """Mantém somente as escolas cujo bairro contém 'MACEDONIA'."""
-    # case=False -> ignora maiúsculas/minúsculas
-    # na=False   -> bairro vazio é tratado como "não é Macedônia"
+    """Mantém os estabelecimentos identificados no Jardim Macedônia."""
+    # O bairro não existe nos microdados de 2025: usamos a lista de
+    # códigos INEP de referência cadastral (ver CODIGOS_JARDIM_MACEDONIA).
     escolas_macedonia = escolas[
-        escolas["NO_BAIRRO"].str.contains(
-            "MACEDONIA", case=False, na=False
-        )
+        escolas["CO_ENTIDADE"].isin(CODIGOS_JARDIM_MACEDONIA)
     ]
     return escolas_macedonia
 
@@ -191,7 +249,7 @@ def tratar_dados_ideb_2025(dados):
 
 
 def criar_base_escola_etapa(escolas):
-    """Cria uma linha por escola e etapa com matrícula no Censo 2024."""
+    """Cria uma linha por escola e etapa com matrícula no Censo 2025."""
     escolas = escolas.copy()
     partes = []
 
@@ -202,7 +260,7 @@ def criar_base_escola_etapa(escolas):
         )
         parte = escolas.loc[matriculas > 0].copy()
         parte["ETAPA_ENSINO"] = etapa
-        parte["MATRICULAS_ETAPA_2024"] = (
+        parte["MATRICULAS_ETAPA_2025"] = (
             matriculas[matriculas > 0].astype("Int64")
         )
         partes.append(parte)
@@ -223,7 +281,7 @@ def criar_base_escola_etapa(escolas):
 
 
 def integrar_censo_com_ideb(base_etapas, ideb):
-    """Relaciona Censo 2024 e IDEB 2025 por código INEP e etapa."""
+    """Relaciona Censo 2025 e IDEB 2025 por código INEP e etapa."""
     ideb_sp = ideb[ideb["SG_UF"] == "SP"].copy()
 
     resultado = pd.merge(

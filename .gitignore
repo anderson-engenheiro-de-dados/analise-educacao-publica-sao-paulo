@@ -33,3 +33,7 @@ backup/
 # Arquivos oficiais grandes do IDEB 2025 (~200 MB).
 # São baixados novamente por integrar_ideb.py a partir do site do Inep.
 data/raw/ideb/*.zip
+
+# Microdados completos do Censo Escolar (~512 MB).
+# São baixados novamente por preparar_censo_2025.py a partir do site do Inep.
+data/raw/censo/*.zip

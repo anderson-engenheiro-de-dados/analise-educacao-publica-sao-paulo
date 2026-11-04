@@ -1,12 +1,12 @@
 """
 Módulo de INGESTÃO.
 
-Responsabilidade: obter e ler os arquivos originais do Censo Escolar 2024
+Responsabilidade: obter e ler os arquivos originais do Censo Escolar 2025
 e do IDEB 2025, sem aplicar regras de negócio aos dados.
 """
 
 from datetime import date
-from hashlib import sha256
+from hashlib import md5, sha256
 from io import BytesIO
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile, is_zipfile
@@ -14,8 +14,30 @@ from zipfile import BadZipFile, ZipFile, is_zipfile
 import pandas as pd
 import requests
 
-# Caminho do arquivo CSV original (dados brutos - nunca alteramos este arquivo)
-CAMINHO_DADOS_BRUTOS = "data/raw/escolas_2024.csv"
+# Recortes do município de São Paulo gerados por preparar_censo_2025.py
+# a partir dos microdados oficiais (nunca alteramos estes arquivos à mão).
+# Em 2025 o Inep separou o cadastro das escolas e as matrículas em tabelas
+# diferentes, ligadas pelo código INEP (CO_ENTIDADE).
+CAMINHO_DADOS_BRUTOS = "data/raw/escolas_sp_2025.csv"
+CAMINHO_MATRICULAS_BRUTAS = "data/raw/matriculas_sp_2025.csv"
+
+# Microdados oficiais do Censo Escolar 2025, conforme a página do Inep:
+# https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar
+PASTA_CENSO = Path("data/raw/censo")
+URL_CENSO_2025 = (
+    "https://download.inep.gov.br/dados_abertos/"
+    "microdados_censo_escolar_2025_.zip"
+)
+VERSAO_CENSO_2025 = "v2 - documento atualizado em julho/2026"
+TABELA_ESCOLA_2025 = (
+    "microdados_censo_escolar_2025_v2/dados/Tabela_Escola_2025_V2.csv"
+)
+TABELA_MATRICULA_2025 = (
+    "microdados_censo_escolar_2025_v2/dados/Tabela_Matricula_2025_V2.csv"
+)
+
+# Código IBGE do município de São Paulo
+CODIGO_MUNICIPIO_SAO_PAULO = "3550308"
 
 # O Inep publica um arquivo oficial por etapa de ensino.
 PASTA_IDEB = Path("data/raw/ideb")
@@ -89,6 +111,91 @@ def baixar_arquivo(url, caminho, timeout=(10, 120)):
         raise RuntimeError(
             f"Não foi possível baixar o arquivo oficial: {url}"
         ) from erro
+
+
+def baixar_microdados_censo_2025():
+    """Baixa (ou reutiliza) o ZIP oficial dos microdados do Censo 2025."""
+    nome_arquivo = URL_CENSO_2025.rsplit("/", maxsplit=1)[-1]
+    caminho = PASTA_CENSO / nome_arquivo
+    # O arquivo tem cerca de 512 MB: damos mais tempo para cada leitura.
+    return baixar_arquivo(URL_CENSO_2025, caminho, timeout=(10, 300))
+
+
+def salvar_metadados_fonte_censo(caminho_zip):
+    """Registra URL, versão, data, tamanho e assinatura do ZIP do Censo."""
+    caminho_zip = Path(caminho_zip)
+    metadados = pd.DataFrame([{
+        "FONTE": "Inep - Microdados do Censo Escolar da Educação Básica 2025",
+        "VERSAO": VERSAO_CENSO_2025,
+        "URL_FONTE": URL_CENSO_2025,
+        "DATA_REGISTRO": date.today().isoformat(),
+        "ARQUIVO": caminho_zip.name,
+        "TAMANHO_BYTES": caminho_zip.stat().st_size,
+        "SHA256": calcular_sha256(caminho_zip),
+    }])
+    caminho_metadados = PASTA_CENSO / "fonte_censo_2025.csv"
+    metadados.to_csv(
+        caminho_metadados,
+        sep=";",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    return caminho_metadados
+
+
+def conferir_md5_oficial(caminho_zip, tabela):
+    """Compara o MD5 de uma tabela com o valor publicado pelo Inep no ZIP."""
+    pasta_dados = tabela.rsplit("/", maxsplit=1)[0]
+    nome_tabela = tabela.rsplit("/", maxsplit=1)[-1].lower()
+
+    with ZipFile(caminho_zip) as arquivo_zip:
+        texto = arquivo_zip.read(
+            f"{pasta_dados}/md5_microdados_ed_basica_2025.txt"
+        ).decode("latin-1")
+
+        # Cada linha do arquivo oficial tem o formato: MD5 *nome_do_arquivo
+        md5_oficial = None
+        for linha in texto.splitlines():
+            if linha.strip().lower().endswith(nome_tabela):
+                md5_oficial = linha.split()[0].lower()
+
+        assinatura = md5()
+        with arquivo_zip.open(tabela) as arquivo:
+            for bloco in iter(lambda: arquivo.read(1024 * 1024), b""):
+                assinatura.update(bloco)
+
+    if md5_oficial != assinatura.hexdigest():
+        raise ValueError(f"MD5 diferente do publicado pelo Inep: {tabela}")
+    return md5_oficial
+
+
+def ler_tabela_censo_do_municipio(caminho_zip, tabela, codigo_municipio):
+    """Lê uma tabela do ZIP do Censo e mantém só as linhas do município."""
+    partes = []
+
+    with ZipFile(caminho_zip) as arquivo_zip:
+        with arquivo_zip.open(tabela) as arquivo:
+            # encoding="latin-1" -> codificação real dos CSVs do Censo 2025
+            # chunksize -> lê o arquivo nacional em blocos, sem esgotar a memória
+            blocos = pd.read_csv(
+                arquivo,
+                sep=";",
+                dtype=str,
+                encoding="latin-1",
+                chunksize=50_000,
+            )
+            for bloco in blocos:
+                partes.append(
+                    bloco[bloco["CO_MUNICIPIO"] == codigo_municipio]
+                )
+
+    return pd.concat(partes, ignore_index=True)
+
+
+def salvar_recorte(dados, caminho):
+    """Salva um recorte dos microdados em CSV (separador ;, UTF-8)."""
+    dados.to_csv(caminho, sep=";", index=False, encoding="utf-8")
+    return caminho
 
 
 def baixar_arquivos_ideb_2025():

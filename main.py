@@ -2,9 +2,9 @@
 Ponto de entrada do projeto.
 
 Análise das escolas públicas do Jardim Macedônia (São Paulo)
-com os microdados do Censo Escolar 2024.
+com os microdados do Censo Escolar 2025.
 
-Execute a partir da pasta Entrega_final:
+Execute a partir da pasta Entrega_final (depois de preparar_censo_2025.py):
     python main.py
 """
 
@@ -16,7 +16,14 @@ import analise
 def main():
     # 1. INGESTÃO: ler o CSV original
     dados = ingestao.carregar_dados_brutos(ingestao.CAMINHO_DADOS_BRUTOS)
+    tratamento.validar_ano_censo(dados)
     analise.mostrar_tamanho_da_base(dados)
+
+    # Em 2025 as matrículas vêm de outra tabela oficial do Censo
+    matriculas = ingestao.carregar_dados_brutos(
+        ingestao.CAMINHO_MATRICULAS_BRUTAS
+    )
+    dados = tratamento.juntar_escolas_e_matriculas(dados, matriculas)
 
     
     # 2. TRATAMENTO + ANÁLISE: cada etapa recebe o resultado da anterior

@@ -1,4 +1,4 @@
-# Análise da Educação Pública em São Paulo — Censo Escolar 2024 e IDEB 2025
+# Análise da Educação Pública em São Paulo — Censo Escolar 2025 e IDEB 2025
 
 Projeto acadêmico da pós-graduação em Engenharia de Dados da PUC Minas.
 
@@ -9,13 +9,18 @@ foco nas escolas do Jardim Macedônia, utilizando dados públicos oficiais do
 Inep e técnicas de Engenharia de Dados: ingestão, tratamento, validação,
 análise exploratória e integração entre fontes.
 
+A pesquisa trata **exclusivamente do ano de 2025**: o cadastro das escolas e
+as matrículas vêm do Censo Escolar 2025, e os indicadores de qualidade vêm do
+IDEB 2025 (que incorpora as notas do Saeb 2025). O projeto não faz
+comparações com outros anos.
+
 ## Tecnologias utilizadas
 
 - **Python** (testado com a versão 3.14)
 - **pandas** — leitura, tratamento, filtros e `merge` dos dados
 - **Matplotlib** — geração dos gráficos
-- **requests** — download dos arquivos oficiais do IDEB, com timeout e
-  tratamento de erros
+- **requests** — download dos arquivos oficiais, com timeout e tratamento de
+  erros
 - **openpyxl** — leitura das planilhas XLSX do IDEB pelo pandas
 
 O NumPy não é importado diretamente pelos scripts; ele é instalado
@@ -25,36 +30,56 @@ automaticamente como dependência do pandas.
 
 | Fonte | Uso no projeto | Onde obter |
 |---|---|---|
-| Inep — Censo Escolar 2024 (microdados, tabela de escolas) | Cadastro das escolas e matrículas de 2024 | [Microdados do Censo Escolar](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar) |
+| Inep — Microdados do Censo Escolar da Educação Básica 2025 (versão v2, documento atualizado em julho/2026) | Cadastro das escolas e matrículas de 2025 | [Microdados do Censo Escolar](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar) |
 | Inep — IDEB 2025 por escola | Indicadores de qualidade por etapa | [Resultados do IDEB 2005-2025](https://www.gov.br/inep/pt-br/areas-de-atuacao/pesquisas-estatisticas-e-indicadores/ideb/resultados/2005-2025) |
 
 Os dados abertos do Inep são disponibilizados, por padrão, sob a licença
 Creative Commons Atribuição 4.0 (CC BY 4.0), conforme a Portaria Inep
 nº 496/2021. Os créditos dos dados pertencem ao Inep.
 
-### Censo Escolar 2024
+### Censo Escolar 2025
 
-O arquivo `data/raw/escolas_2024.csv` contém **8.023 registros e 426 colunas**:
-o recorte da tabela de escolas dos microdados do Censo Escolar 2024 para o
-município de São Paulo (`CO_MUNICIPIO = 3550308`). São dados institucionais
-das escolas (endereço, dependência administrativa, matrículas etc.), sem
-dados individuais de alunos.
+Arquivo oficial: [microdados_censo_escolar_2025_.zip](https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2025_.zip)
+(cerca de 512 MB, **não versionado**). O script `preparar_censo_2025.py`:
 
-Esse recorte foi feito antes da construção dos scripts e **não há, neste
-repositório, um script que o gere automaticamente**. Para reconstruí-lo:
+1. baixa o ZIP para `data/raw/censo/` ou reutiliza um ZIP válido já salvo;
+2. registra URL, versão, data, tamanho e SHA-256 em
+   `data/raw/censo/fonte_censo_2025.csv`;
+3. confere cada tabela com o MD5 publicado pelo Inep dentro do próprio ZIP;
+4. lê as tabelas nacionais (CSV com `;`, codificação Latin-1) em blocos e
+   mantém apenas o município de São Paulo pelo código IBGE
+   `CO_MUNICIPIO = 3550308`;
+5. salva os recortes, sem alterar as colunas:
+   - `data/raw/escolas_sp_2025.csv` — Tabela de Escola (7.905 registros,
+     290 colunas);
+   - `data/raw/matriculas_sp_2025.csv` — Tabela de Matrícula (7.187
+     registros, 263 colunas).
 
-1. baixe os microdados do Censo Escolar 2024 na página oficial do Inep;
-2. abra o CSV da tabela de escolas (separador `;`);
-3. mantenha somente as linhas com `CO_MUNICIPIO = 3550308`;
-4. salve como `data/raw/escolas_2024.csv`, com separador `;` e codificação
-   UTF-8.
+**Mudanças de leiaute em 2025** (confirmadas no dicionário de dados oficial):
+
+- as quantidades de matrículas (`QT_MAT_*`) saíram da Tabela de Escola e
+  passaram para uma Tabela de Matrícula própria, com uma linha por escola. As
+  duas tabelas são unidas pelo código INEP (`CO_ENTIDADE`);
+- os campos de endereço, **incluindo o bairro (`NO_BAIRRO`)**, foram retirados
+  dos microdados. Segundo o Inep, essas informações continuam disponíveis no
+  [Catálogo de Escolas](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/inep-data/catalogo-de-escolas).
+
+As variáveis usadas pelo projeto (`CO_ENTIDADE`, `NO_ENTIDADE`,
+`CO_MUNICIPIO`, `TP_DEPENDENCIA`, `TP_SITUACAO_FUNCIONAMENTO`, `QT_MAT_FUND`,
+`QT_MAT_FUND_AI`, `QT_MAT_FUND_AF`, `QT_MAT_MED`, `NU_ANO_CENSO`) foram
+conferidas no dicionário de dados do Censo 2025. Como o bairro não está
+disponível, as colunas de saída trazem o distrito (`NO_DISTRITO`).
+
+> **Observação sobre o download:** o servidor do Inep não envia o certificado
+> intermediário da cadeia TLS. Navegadores e o Windows completam a cadeia
+> automaticamente, mas o Python pode falhar com `CERTIFICATE_VERIFY_FAILED`.
+> Nesse caso, baixe o ZIP pelo navegador, salve-o em `data/raw/censo/` e
+> execute o script novamente: o arquivo será reutilizado e validado.
 
 ### IDEB 2025
 
-Na investigação realizada em 3 de novembro de 2026, não foi identificada uma
-API pública e documentada para consultar o IDEB 2025 por escola. Por isso, o
-projeto usa os arquivos oficiais para download, sem APIs comunitárias nem
-endpoints internos não documentados.
+Não foi identificada uma API pública e documentada para consultar o IDEB 2025
+por escola. Por isso, o projeto usa os arquivos oficiais para download:
 
 | Etapa | Arquivo do Inep |
 |---|---|
@@ -62,11 +87,10 @@ endpoints internos não documentados.
 | Anos finais do Ensino Fundamental | [divulgacao_anos_finais_escolas_2025.zip](https://download.inep.gov.br/ideb/resultados/divulgacao_anos_finais_escolas_2025.zip) |
 | Ensino Médio | [divulgacao_ensino_medio_escolas_2025.zip](https://download.inep.gov.br/ideb/resultados/divulgacao_ensino_medio_escolas_2025.zip) |
 
-Os três ZIPs somam cerca de 200 MB e **não são versionados** (estão no
-`.gitignore`). O script `integrar_ideb.py` os baixa automaticamente para
-`data/raw/ideb/`. A URL, a data de execução e a assinatura SHA-256 de cada
-ZIP ficam registradas em `data/raw/ideb/fontes_ideb_2025.csv`, o que permite
-conferir se o arquivo baixado é o mesmo usado nesta análise.
+Os três ZIPs somam cerca de 200 MB e **não são versionados**. O script
+`integrar_ideb.py` os baixa para `data/raw/ideb/` (ou reutiliza os existentes)
+e registra URL, data de execução e SHA-256 em
+`data/raw/ideb/fontes_ideb_2025.csv`.
 
 ## Estrutura do repositório
 
@@ -74,39 +98,80 @@ conferir se o arquivo baixado é o mesmo usado nesta análise.
 .
 ├── data/
 │   ├── raw/
-│   │   ├── escolas_2024.csv            # recorte do Censo Escolar 2024 (SP)
+│   │   ├── escolas_sp_2025.csv         # Tabela de Escola 2025 (SP)
+│   │   ├── matriculas_sp_2025.csv      # Tabela de Matrícula 2025 (SP)
+│   │   ├── censo/
+│   │   │   ├── fonte_censo_2025.csv    # URL, versão e SHA-256 do ZIP
+│   │   │   └── *.zip                   # microdados (não versionados)
 │   │   └── ideb/
-│   │       ├── fontes_ideb_2025.csv    # URL e SHA-256 dos ZIPs oficiais
-│   │       └── *.zip                   # baixados pelo script (não versionados)
+│   │       ├── fontes_ideb_2025.csv    # URL e SHA-256 dos ZIPs do IDEB
+│   │       └── *.zip                   # IDEB por escola (não versionados)
 │   └── processed/
-│       ├── escolas_macedonia.csv               # gerado por main.py
-│       └── escolas_publicas_sp_ideb_2025.csv   # gerado por integrar_ideb.py
-├── graficos/                   # gráficos gerados por main.py
-├── main.py                     # pipeline principal do Censo Escolar 2024
-├── ingestao.py                 # leitura do Censo e download/leitura do IDEB
-├── tratamento.py               # filtros, conversões, chave escola/etapa e merge
-├── analise.py                  # estatísticas, validações e gráficos
-├── integrar_ideb.py            # integração Censo 2024 × IDEB 2025
-├── explorar_ideb.py            # conferência rápida da base integrada
+│       ├── escolas_macedonia_2025.csv                  # gerado por main.py
+│       └── escolas_publicas_sp_censo_2025_ideb_2025.csv  # integrar_ideb.py
+├── graficos/                     # gráficos gerados por main.py
+├── preparar_censo_2025.py        # download, validação e recorte do Censo 2025
+├── main.py                       # pipeline principal do Censo Escolar 2025
+├── ingestao.py                   # download e leitura das fontes oficiais
+├── tratamento.py                 # filtros, junções, chave escola/etapa e merge
+├── analise.py                    # estatísticas, validações e gráficos
+├── integrar_ideb.py              # integração Censo 2025 × IDEB 2025
+├── explorar_ideb.py              # exploração da base integrada
 ├── requirements.txt
 └── README.md
 ```
 
-## Etapas do projeto
+## Metodologia
 
-1. **Ingestão dos dados** — leitura do CSV do Censo como texto (`dtype=str`),
-   preservando códigos e zeros à esquerda; download dos ZIPs do IDEB.
-2. **Seleção das escolas públicas** — filtro por dependência administrativa.
-3. **Tratamento e validação** — escolas em atividade, conversão das matrículas
-   para número, cálculo do total e verificação de duplicidades e ausentes.
-4. **Análise exploratória** — estatísticas descritivas e comparação de
-   matrículas por rede.
-5. **Geração dos gráficos** — média de matrículas por rede e matrículas no
-   Jardim Macedônia.
-6. **Integração com indicadores do IDEB** — uma linha por escola e etapa,
-   unida ao IDEB pela chave `CO_ENTIDADE + ETAPA_ENSINO`.
-7. **Análises comparativas** — validação do merge, conferência das redes e
-   comparação dos resultados das escolas de interesse com a fonte oficial.
+### Filtros
+
+| Etapa | Critério |
+|---|---|
+| Município | `CO_MUNICIPIO = 3550308` (código IBGE de São Paulo) |
+| Escolas públicas | `TP_DEPENDENCIA` 1 (federal), 2 (estadual) ou 3 (municipal) |
+| Em atividade | `TP_SITUACAO_FUNCIONAMENTO = 1` |
+| Com Fundamental ou Médio | `QT_MAT_FUND + QT_MAT_MED > 0` |
+| Jardim Macedônia | lista de códigos INEP de referência cadastral (ver abaixo); depois, redes estadual ou municipal (2 ou 3), em atividade e com Fundamental ou Médio |
+
+**Identificação do Jardim Macedônia.** Os microdados do Censo 2025 não
+contêm o campo de bairro. Por isso, as escolas do bairro são localizadas por
+uma lista fixa de 6 códigos INEP (`CODIGOS_JARDIM_MACEDONIA`, em
+`tratamento.py`), usada **apenas como referência cadastral**: ela foi obtida
+no cadastro do Censo Escolar 2024, a última edição que trazia o campo
+`NO_BAIRRO`. Nenhum dado de 2024 é usado nas análises: rede, situação de
+funcionamento, matrículas e IDEB vêm exclusivamente de 2025.
+
+Limitações dessa identificação:
+
+- escolas abertas no bairro depois daquele cadastro não são capturadas;
+- a localização das escolas da lista não pode ser reconfirmada com os
+  microdados de 2025, que não trazem bairro nem endereço;
+- uma alternativa futura é confirmar o bairro pelo
+  [Catálogo de Escolas](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/inep-data/catalogo-de-escolas)
+  do Inep.
+
+### Valores ausentes
+
+- Todos os CSVs são lidos como texto (`dtype=str`), preservando códigos e
+  zeros à esquerda.
+- Escolas do cadastro sem linha na Tabela de Matrícula ficam com matrículas
+  ausentes (não zero) e não entram no filtro "com Fundamental ou Médio".
+- No IDEB, os marcadores `-`, `ND` e `ND***` viram valor ausente, nunca zero.
+- Registros escola/etapa não localizados no arquivo do IDEB ficam com os campos
+  do IDEB ausentes (inclusive `ANO_IDEB`) e com a situação "Escola/etapa não
+  localizada no arquivo do Inep".
+
+### Validações automáticas
+
+- a base precisa conter **somente** `NU_ANO_CENSO = 2025`; caso contrário, o
+  pipeline é interrompido;
+- MD5 oficial de cada tabela do Censo e SHA-256 dos arquivos baixados;
+- recortes com um único município e sem código INEP duplicado;
+- junção escola × matrícula `one_to_one`, sem alterar a quantidade de escolas;
+- integração com o IDEB `one_to_one`, com a mesma quantidade de registros
+  antes e depois do merge e sem chave duplicada;
+- rede do Censo igual à rede do IDEB;
+- IDEB das escolas de interesse igual ao valor lido da fonte oficial.
 
 ## Como executar
 
@@ -123,9 +188,10 @@ python -m pip install -r requirements.txt
 ### 2. Executar os scripts
 
 Todos os caminhos são relativos: **execute os comandos de dentro da pasta do
-projeto**. A ordem abaixo é a recomendada:
+projeto**, nesta ordem:
 
 ```bash
+python preparar_censo_2025.py
 python main.py
 python integrar_ideb.py
 python explorar_ideb.py
@@ -133,145 +199,134 @@ python explorar_ideb.py
 
 | Script | Precisa de | Gera |
 |---|---|---|
-| `main.py` | `data/raw/escolas_2024.csv` | `data/processed/escolas_macedonia.csv` e os dois PNGs em `graficos/` |
-| `integrar_ideb.py` | `data/raw/escolas_2024.csv` e acesso à internet na primeira execução | ZIPs do IDEB, `fontes_ideb_2025.csv` e `data/processed/escolas_publicas_sp_ideb_2025.csv` |
-| `explorar_ideb.py` | `data/processed/escolas_publicas_sp_ideb_2025.csv` | apenas saída no terminal |
+| `preparar_censo_2025.py` | internet na primeira execução (ZIP de ~512 MB) | `escolas_sp_2025.csv`, `matriculas_sp_2025.csv` e `fonte_censo_2025.csv` |
+| `main.py` | os dois recortes de 2025 | `data/processed/escolas_macedonia_2025.csv` e os dois PNGs de 2025 |
+| `integrar_ideb.py` | os dois recortes de 2025 e internet na primeira execução | ZIPs do IDEB, `fontes_ideb_2025.csv` e a base integrada |
+| `explorar_ideb.py` | a base integrada | apenas saída no terminal |
 
-Observações:
+Os recortes de 2025 e a base integrada já estão versionados. Por isso, é
+possível executar `main.py`, `integrar_ideb.py` (que precisa dos ZIPs do IDEB)
+e `explorar_ideb.py` sem baixar os microdados do Censo.
 
-- `integrar_ideb.py` não depende de `main.py`; ele lê o Censo diretamente.
-  Se os ZIPs já existirem e forem válidos, eles são reutilizados.
-- `explorar_ideb.py` depende do CSV gerado por `integrar_ideb.py`. O CSV
-  integrado já está versionado, então o script também funciona sem baixar
-  os ZIPs.
-- `main.py` abre as janelas dos gráficos (`plt.show()`); feche cada janela
-  para a execução continuar.
+`main.py` abre as janelas dos gráficos (`plt.show()`); feche cada janela para
+a execução continuar.
 
-### 3. Visualizar os gráficos
+### 3. Gráficos gerados
 
-Os gráficos são salvos em `graficos/` e podem ser abertos em qualquer
-visualizador de imagens ou diretamente no GitHub:
+- [Média de matrículas no Fundamental e Médio por rede — São Paulo, Censo 2025](graficos/media_matriculas_por_rede_2025.png)
+- [Matrículas no Jardim Macedônia — Censo 2025](graficos/matriculas_macedonia_2025.png)
 
-- [Média de matrículas por rede — São Paulo (2024)](graficos/media_matriculas_por_rede.png)
-- [Matrículas no Jardim Macedônia (2024)](graficos/matriculas_macedonia.png)
+## Resultados (Censo Escolar 2025 e IDEB 2025)
 
-## Resultados
+Valores obtidos na execução dos scripts em 4 de novembro de 2026.
 
-Valores reproduzidos na execução dos scripts em 4 de novembro de 2026.
-
-### Censo Escolar 2024 — município de São Paulo (`main.py`)
+### Município de São Paulo (`main.py`)
 
 | Etapa da seleção | Registros |
 |---|---:|
-| Base original utilizada | 8.023 |
-| Escolas públicas (federais, estaduais e municipais) | 2.886 |
-| Escolas públicas ativas | 2.768 |
-| Escolas com matrículas no Ensino Fundamental ou Médio | 1.710 |
+| Escolas na Tabela de Escola (recorte de SP) | 7.905 |
+| Escolas públicas (federais, estaduais e municipais) | 2.948 |
+| Escolas públicas ativas | 2.825 |
+| Escolas com matrículas no Ensino Fundamental ou Médio | 1.709 |
+| Valores ausentes nas colunas analisadas | 0 |
 | Códigos INEP duplicados na seleção final | 0 |
 
-### Integração Censo 2024 × IDEB 2025 (`integrar_ideb.py`)
+Matrículas no Fundamental e Médio por escola (1.709 escolas): média de
+751,3, mediana de 723, mínimo de 1 e máximo de 2.237.
+
+| Rede | Escolas | Média de matrículas | Mediana |
+|---|---:|---:|---:|
+| Federal | 5 | 501,2 | 345 |
+| Estadual | 1.093 | 759,3 | 695 |
+| Municipal | 611 | 739,2 | 745 |
+
+### Integração Censo 2025 × IDEB 2025 (`integrar_ideb.py`)
 
 | Validação | Resultado |
 |---|---:|
-| Registros escola/etapa antes do merge | 2.991 |
-| Registros escola/etapa depois do merge | 2.991 |
+| Registros escola/etapa antes do merge | 2.973 |
+| Registros escola/etapa depois do merge | 2.973 |
 | Chaves duplicadas depois do merge | 0 |
-| Registros escola/etapa com IDEB 2025 divulgado | 2.577 |
-| Registros escola/etapa sem IDEB 2025 divulgado | 414 |
-| Escolas distintas com pelo menos um IDEB divulgado | 1.599 |
-| Escolas distintas sem IDEB em nenhuma etapa | 111 |
+| Registros escola/etapa com IDEB 2025 divulgado | 2.596 |
+| Registros escola/etapa sem IDEB 2025 divulgado | 377 |
+| — não divulgado pelo Inep | 311 |
+| — escola/etapa não localizada no arquivo do Inep | 66 |
+| Escolas distintas com pelo menos um IDEB divulgado | 1.618 |
+| Escolas distintas sem IDEB em nenhuma etapa | 91 |
 | Divergências de rede entre Censo e IDEB | 0 |
 | Valores das escolas de interesse iguais à fonte oficial | Sim |
 
 > **Atenção:** um registro escola/etapa **não equivale** a uma escola
 > distinta. Uma mesma escola pode aparecer até três vezes (anos iniciais,
-> anos finais e Ensino Médio), uma para cada etapa com matrícula em 2024.
-> Por isso, 2.991 registros escola/etapa correspondem a 1.710 escolas.
+> anos finais e Ensino Médio). Os 2.973 registros escola/etapa correspondem a
+> 1.709 escolas.
 
 ### Escolas do Jardim Macedônia
 
-No Censo 2024 foram encontrados 6 estabelecimentos no bairro; 4 são
-registros públicos (estaduais ou municipais), 3 estão em atividade e 2 têm
-matrículas no Ensino Fundamental ou Médio.
+Dos 6 estabelecimentos identificados, 4 são públicos (estaduais ou
+municipais), 3 estão em atividade e 2 têm matrículas no Ensino Fundamental ou
+Médio em 2025.
 
-**Matrículas (Censo Escolar 2024):**
+| Escola | Código INEP | Rede | Etapa | Matrículas 2025 | IDEB 2025 |
+|---|---:|---|---|---:|---:|
+| EMEF César Yasigi | 35010281 | Municipal | Anos iniciais do EF | 464 | 6,4 |
+| EE Jornalista David Nasser | 35044386 | Estadual | Anos iniciais do EF | 233 | 5,7 |
+| EE Jornalista David Nasser | 35044386 | Estadual | Anos finais do EF | 336 | 3,9 |
+| EE Jornalista David Nasser | 35044386 | Estadual | Ensino Médio | 393 | Não divulgado |
+| **Total** | | | | **1.426** | |
 
-| Escola | Código INEP | Rede | Etapa | Matrículas 2024 |
-|---|---:|---|---|---:|
-| EMEF César Yasigi | 35010281 | Municipal | Anos iniciais do EF | 457 |
-| EE Jornalista David Nasser | 35044386 | Estadual | Anos iniciais do EF | 205 |
-| EE Jornalista David Nasser | 35044386 | Estadual | Anos finais do EF | 350 |
-| EE Jornalista David Nasser | 35044386 | Estadual | Ensino Médio | 337 |
-| **Total** | | | | **1.349** |
-
-**IDEB 2025 (Inep):**
-
-| Escola | Código INEP | Etapa | IDEB 2025 |
-|---|---:|---|---:|
-| EMEF César Yasigi | 35010281 | Anos iniciais do EF | 6,4 |
-| EE Jornalista David Nasser | 35044386 | Anos iniciais do EF | 5,7 |
-| EE Jornalista David Nasser | 35044386 | Anos finais do EF | 3,9 |
-| EE Jornalista David Nasser | 35044386 | Ensino Médio | Não divulgado |
-
-A EMEF César Yasigi aparece apenas nos anos iniciais porque o Censo 2024 não
-registra matrículas dessa escola nas outras etapas. No arquivo oficial de
-Ensino Médio, a EE Jornalista David Nasser possui registro, mas o campo
-`VL_OBSERVADO_2025` está com o marcador `-`; por isso o valor permanece
-ausente (não é tratado como zero).
+No arquivo oficial de Ensino Médio, a EE Jornalista David Nasser possui
+registro, mas o campo `VL_OBSERVADO_2025` está com o marcador `-`; por isso o
+valor permanece ausente.
 
 > **Matrículas não medem qualidade.** A quantidade de matrículas indica o
-> porte da escola em cada etapa; ela não é um indicador de qualidade do
-> ensino. O IDEB, por sua vez, combina o rendimento escolar (aprovação) com o
-> desempenho no Saeb, e também não é uma média de notas individuais.
+> porte da escola em cada etapa, não a qualidade do ensino. O IDEB combina o
+> rendimento escolar (aprovação) com o desempenho no Saeb e também não é uma
+> média de notas individuais.
 
 ## Significado dos principais campos da base integrada
 
-- `ANO_CENSO = 2024`: ano das matrículas e do cadastro da escola;
+- `ANO_CENSO = 2025`: ano das matrículas e do cadastro da escola;
 - `ANO_IDEB = 2025`: edição do indicador oficial;
-- `MATRICULAS_ETAPA_2024`: matrículas da etapa, usadas para identificar as
-  etapas oferecidas pela escola;
+- `MATRICULAS_ETAPA_2025`: matrículas da etapa no Censo 2025;
 - `IDEB_2025`: índice observado divulgado pelo Inep;
+- `NOTA_MATEMATICA_SAEB_2025` e `NOTA_PORTUGUES_SAEB_2025`: notas do Saeb;
+- `INDICADOR_RENDIMENTO_2025`: indicador de rendimento (aprovação);
 - `ETAPA_ENSINO`: anos iniciais, anos finais ou Ensino Médio;
 - `REDE_CENSO` e `REDE_IDEB`: rede informada em cada fonte;
 - `SITUACAO_IDEB_2025`: "Divulgado", "Não divulgado pelo Inep" ou
   "Escola/etapa não localizada no arquivo do Inep".
 
-## Limitações metodológicas
+## Limitações da pesquisa
 
-- **Anos diferentes:** as matrículas são de 2024 e o IDEB é de 2025. Os anos
-  permanecem explícitos e não são tratados como o mesmo período.
-- **Recorte do Censo:** o arquivo bruto já é um recorte do município de São
-  Paulo, feito fora dos scripts deste repositório.
-- **Definição de escola pública:** a análise municipal considera as redes
-  federal, estadual e municipal (`TP_DEPENDENCIA` 1, 2 e 3); a análise do
-  Jardim Macedônia considera apenas as redes estadual e municipal (2 e 3).
-- **Identificação do bairro:** o Jardim Macedônia é identificado pelo texto
-  do campo `NO_BAIRRO` (contém "MACEDONIA"); variações de grafia no cadastro
-  podem não ser capturadas.
-- **Etapas consideradas:** apenas Ensino Fundamental e Médio. Educação
-  Infantil, EJA e outras modalidades não entram no total de matrículas.
-- **IDEB ausente:** resultados não divulgados (`-`, `ND`, `ND***`) ficam como
-  valor ausente, o que reduz a cobertura das comparações.
-- **Data em `fontes_ideb_2025.csv`:** o campo `DATA_EXTRACAO` registra a data
-  da última execução de `integrar_ideb.py`, mesmo quando os ZIPs já baixados
-  são reutilizados. A garantia de que o arquivo é o mesmo é dada pelo SHA-256.
+- **Bairro indisponível em 2025:** o Jardim Macedônia é identificado por uma
+  lista fixa de códigos INEP de referência cadastral (ver "Metodologia").
+  Novas escolas no bairro não são detectadas.
+- **Escolas sem linha de matrícula:** 122 escolas públicas ativas de São Paulo
+  não aparecem na Tabela de Matrícula 2025 e, por isso, não entram nas análises
+  de matrículas.
+- **Etapas consideradas:** apenas Ensino Fundamental e Médio regulares.
+  Educação Infantil, EJA e outras modalidades não entram no total.
+- **IDEB ausente:** resultados não divulgados reduzem a cobertura das
+  comparações.
+- **Data em `fontes_ideb_2025.csv` e `fonte_censo_2025.csv`:** registra a data
+  da última execução, mesmo quando o ZIP é reutilizado. A garantia de que o
+  arquivo é o mesmo é dada pelo SHA-256.
 - **Sem testes automatizados:** a verificação é feita pelas validações
-  exibidas no terminal durante a execução.
+  executadas durante o pipeline.
 
 ## Estado atual do desenvolvimento
 
 Concluído:
 
-- pipeline de análise do Censo Escolar 2024 (`main.py`);
-- gráficos de matrículas por rede e do Jardim Macedônia;
+- download, validação e recorte automatizados do Censo Escolar 2025;
+- pipeline de análise do Censo Escolar 2025 (`main.py`) e seus gráficos;
 - integração com o IDEB 2025 e validações do merge (`integrar_ideb.py`);
-- conferência rápida da base integrada (`explorar_ideb.py`).
+- exploração da base integrada (`explorar_ideb.py`).
 
 Ainda não implementado:
 
-- script para gerar automaticamente o recorte `escolas_2024.csv` a partir dos
-  microdados completos;
-- análises estatísticas e gráficos sobre o IDEB 2025;
+- identificação do bairro por uma fonte oficial de 2025 (Catálogo de Escolas);
 - testes automatizados.
 
 O projeto não utiliza banco de dados nem dashboard nesta etapa.

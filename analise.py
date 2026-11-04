@@ -143,13 +143,16 @@ def grafico_media_matriculas_por_rede(escolas):
     # Criar o gráfico
     medias.plot(kind="bar")
 
-    plt.title("Média de matrículas por rede - São Paulo (2024)")
+    plt.title(
+        "Média de matrículas no Fundamental e Médio por rede\n"
+        "São Paulo - Censo Escolar 2025"
+    )
     plt.xlabel("Rede de ensino")
-    plt.ylabel("Média de matrículas")
+    plt.ylabel("Média de matrículas por escola")
     plt.xticks(rotation=0)
     plt.tight_layout()
     plt.savefig(
-        "graficos/media_matriculas_por_rede.png",
+        "graficos/media_matriculas_por_rede_2025.png",
         dpi=300,
         bbox_inches="tight"
     )
@@ -168,7 +171,7 @@ def grafico_matriculas_macedonia(escolas):
         escolas["TOTAL_MATRICULAS"]
     )
 
-    plt.title("Matrículas no Jardim Macedônia - 2024")
+    plt.title("Matrículas no Jardim Macedônia - Censo Escolar 2025")
     plt.xlabel("Escolas")
     plt.ylabel("Matrículas no Fundamental e Médio")
     plt.xticks(rotation=15, ha="right")
@@ -176,7 +179,7 @@ def grafico_matriculas_macedonia(escolas):
     plt.tight_layout()
 
     plt.savefig(
-        "graficos/matriculas_macedonia.png",
+        "graficos/matriculas_macedonia_2025.png",
         dpi=300,
         bbox_inches="tight"
     )
@@ -199,7 +202,7 @@ def validar_integracao_ideb(base_etapas, resultado):
         .sum()
     )
 
-    print("\nValidação da integração Censo 2024 x IDEB 2025:")
+    print("\nValidação da integração Censo 2025 x IDEB 2025:")
     print(f"Registros escola/etapa antes do merge: {antes}")
     print(f"Registros escola/etapa depois do merge: {depois}")
     print(f"Chaves duplicadas após o merge: {duplicados}")
@@ -239,7 +242,7 @@ def mostrar_resultados_escolas_interesse(resultado, codigos):
         "NO_ENTIDADE",
         "ETAPA_ENSINO",
         "ANO_CENSO",
-        "MATRICULAS_ETAPA_2024",
+        "MATRICULAS_ETAPA_2025",
         "ANO_IDEB",
         "IDEB_2025",
         "SITUACAO_IDEB_2025",
